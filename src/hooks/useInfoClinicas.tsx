@@ -11,8 +11,7 @@ export const useInfoClinicas = () => {
     setError(null);
 
     try {
-      const response = await api.put<SaveClinicalInfoResponse>(`/users/${userId}/clinical-info`, clinicalData);
-      return response.data;
+      return await api.saveClinicalInfo(userId, clinicalData);
     } catch (err: unknown) {
       const errMsg = getErrorMessage(err, 'Erro ao salvar informações clínicas');
       setError(errMsg);

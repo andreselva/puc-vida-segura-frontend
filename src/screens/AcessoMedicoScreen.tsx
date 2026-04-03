@@ -16,7 +16,13 @@ export const AcessoMedicoScreen: React.FC = () => {
       return;
     }
 
-    const profileId = linkPerfil.includes('/') ? linkPerfil.split('profile=').pop() || linkPerfil.split('/').pop() || linkPerfil : linkPerfil;
+    let profileId = linkPerfil.trim();
+    try {
+      const urlToParse = profileId.startsWith('http') ? profileId : `http://x/?profile=${profileId}`;
+      const fromParam = new URL(urlToParse).searchParams.get('profile');
+      if (fromParam) profileId = fromParam;
+    } catch {
+    }
 
     try {
       const profile = await getPublicProfile(profileId, senhaPublica);

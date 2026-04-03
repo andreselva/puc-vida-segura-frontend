@@ -1,3 +1,4 @@
+import React from "react";
 import type { InputHTMLAttributes, ReactNode } from "react";
 
 interface PillInputProps extends InputHTMLAttributes<HTMLInputElement> {

@@ -4,6 +4,7 @@ export interface LoginResponse {
     id: string;
     nome: string;
     email: string;
+    profileId: string;
   };
 }
 
@@ -28,15 +29,21 @@ export interface ClinicalData {
   senhaPublica?: string;
 }
 
-export interface AppUser extends Required<Omit<UserData, 'confirmSenha'>> {
+export interface AppUser {
   id: string;
   profileId: string;
+  nome: string;
+  sobrenome: string;
+  dt_nasc: string;
+  sexo: string;
+  email: string;
   clinicalInfo: ClinicalData;
   createdAt: string;
 }
 
 export interface RegisterResponse {
   message: string;
+  token: string;
   user: {
     id: string;
     nome: string;
@@ -57,7 +64,7 @@ export interface PublicPatientProfile {
   sexo: string;
   dt_nasc: string;
   email: string;
-  clinicalInfo: ClinicalData;
+  clinicalInfo: Omit<ClinicalData, 'senhaPublica'>;
   profileUrl: string;
 }
 
@@ -67,4 +74,8 @@ export interface DemoAccessInfo {
   senhaPublica: string;
   profileId: string;
   profileUrl: string;
+}
+
+export interface AuthenticatedUserResponse {
+  user: AppUser | null;
 }

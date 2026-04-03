@@ -11,8 +11,7 @@ export const useLogin = () => {
     setError(null);
 
     try {
-      const response = await api.post<LoginResponse>('/auth/login', { email, senha });
-      return response.data;
+      return await api.login(email, senha);
     } catch (err: unknown) {
       const errMsg = getErrorMessage(err, 'Erro ao fazer login');
       setError(errMsg);

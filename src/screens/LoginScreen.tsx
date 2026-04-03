@@ -1,17 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLogin } from '../hooks/useLogin';
 import { PillInput } from '../components/Shared';
 import heroImage from '../assets/hero.png';
-import { getDemoAccessInfo } from '../services/api';
+import { api } from '../services/api';
+import type { DemoAccessInfo } from '../types';
 
 export const LoginScreen: React.FC = () => {
   const navigate = useNavigate();
   const { login, loading, error } = useLogin();
   const [email, setEmail] = useState<string>('');
   const [senha, setSenha] = useState<string>('');
+  const [demoAccess, setDemoAccess] = useState<DemoAccessInfo | null>(null);
 
-  const demoAccess = getDemoAccessInfo();
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDemoAccess = async () => {
+      try {
+        const response = await api.getDemoAccessInfo();
+
+        if (isMounted) {
+          setDemoAccess(response);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    void loadDemoAccess();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !senha) {
@@ -28,6 +50,10 @@ export const LoginScreen: React.FC = () => {
   };
 
   const fillDemoCredentials = () => {
+    if (!demoAccess) {
+      return;
+    }
+
     setEmail(demoAccess.email);
     setSenha(demoAccess.senha);
   };
@@ -63,12 +89,13 @@ export const LoginScreen: React.FC = () => {
 
         <div className="mt-10 w-full max-w-sm bg-white/20 border border-white/30 rounded-2xl p-4 text-white">
           <p className="font-semibold mb-2">Acesso de demonstração</p>
-          <p className="text-sm">E-mail: {demoAccess.email}</p>
-          <p className="text-sm">Senha: {demoAccess.senha}</p>
-          <p className="text-sm">Senha pública do perfil: {demoAccess.senhaPublica}</p>
+          <p className="text-sm">E-mail: {demoAccess?.email ?? 'carregando...'}</p>
+          <p className="text-sm">Senha: {demoAccess?.senha ?? 'carregando...'}</p>
+          <p className="text-sm">Senha pública do perfil: {demoAccess?.senhaPublica ?? 'carregando...'}</p>
           <button
             onClick={fillDemoCredentials}
-            className="mt-3 bg-white text-[#00605A] rounded-md py-2 px-4 font-semibold hover:opacity-90 transition"
+            disabled={!demoAccess}
+            className="mt-3 bg-white text-[#00605A] rounded-md py-2 px-4 font-semibold hover:opacity-90 transition disabled:opacity-70 disabled:cursor-not-allowed"
           >
             Preencher dados demo
           </button>

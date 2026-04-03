@@ -1,40 +1,80 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useInfoClinicas } from '../hooks/useInfoClinicas';
-import type { ClinicalData } from '../types';
+import type { AppUser, ClinicalData } from '../types';
 import { AppContainer, PillInput } from '../components/Shared';
-import { getAuthenticatedUser } from '../services/api';
+import { api } from '../services/api';
 
 export const InfoClinicasScreen: React.FC = () => {
   const navigate = useNavigate();
   const { saveClinicalInfo, loading, error } = useInfoClinicas();
-  const currentUser = getAuthenticatedUser();
-  const [formData, setFormData] = useState<ClinicalData>(() => currentUser?.clinicalInfo || {});
-  const userId = currentUser?.id || '';
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
+  const [formData, setFormData] = useState<ClinicalData>({});
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login', { replace: true });
-    }
-  }, [currentUser, navigate]);
+    let isMounted = true;
+
+    const loadUser = async () => {
+      try {
+        const user = await api.getAuthenticatedUser();
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (!user) {
+          navigate('/login', { replace: true });
+          return;
+        }
+
+        setCurrentUser(user);
+        setFormData(user.clinicalInfo || {});
+      } catch (err) {
+        console.error(err);
+        if (isMounted) {
+          navigate('/login', { replace: true });
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingUser(false);
+        }
+      }
+    };
+
+    void loadUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
 
   const handleChange = (field: keyof ClinicalData, value: string) => {
     setFormData((previousData) => ({ ...previousData, [field]: value }));
   };
 
   const handleSave = async () => {
-    if (!userId) {
+    if (!currentUser?.id) {
       alert('Nenhum usuário autenticado foi encontrado.');
       return;
     }
 
     try {
-      await saveClinicalInfo(userId, formData);
+      const response = await saveClinicalInfo(currentUser.id, formData);
+      setCurrentUser(response.user);
       navigate('/meu-qrcode');
     } catch (err) {
       console.error(err);
     }
   };
+
+  if (loadingUser) {
+    return (
+      <AppContainer>
+        <p className="text-[#00605A] text-lg">Carregando dados do usuário...</p>
+      </AppContainer>
+    );
+  }
 
   return (
     <AppContainer>
@@ -58,7 +98,11 @@ export const InfoClinicasScreen: React.FC = () => {
             value={formData.medicamentos || ''}
             onChange={(event) => handleChange('medicamentos', event.target.value)}
           />
-          <PillInput placeholder="Doenças" value={formData.doencas || ''} onChange={(event) => handleChange('doencas', event.target.value)} />
+          <PillInput
+            placeholder="Doenças"
+            value={formData.doencas || ''}
+            onChange={(event) => handleChange('doencas', event.target.value)}
+          />
           <PillInput
             placeholder="Cirurgias"
             value={formData.cirurgias || ''}

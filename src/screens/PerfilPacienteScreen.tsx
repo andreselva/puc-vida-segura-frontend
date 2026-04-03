@@ -1,15 +1,107 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { PublicPatientProfile } from '../types';
-import { getLastPublicProfile } from '../services/api';
+import { api, getLastPublicProfile } from '../services/api';
 
 export const PerfilPacienteScreen: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
+
   const routeProfile = (location.state as { profile?: PublicPatientProfile } | null)?.profile ?? null;
   const cachedProfile = getLastPublicProfile();
-  const profile = routeProfile ?? (cachedProfile?.profileId === id ? cachedProfile : null);
+  const initialProfile = routeProfile ?? (cachedProfile?.profileId === id ? cachedProfile : null);
+
+  const [profile, setProfile] = useState<PublicPatientProfile | null>(initialProfile);
+  const [needsPassword, setNeedsPassword] = useState<boolean>(!initialProfile);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [password, setPassword] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (initialProfile || !id) return;
+
+    let isMounted = true;
+    const tryFetch = async () => {
+      setLoading(true);
+      try {
+        const fetched = await api.getPublicProfile(id, undefined);
+        if (isMounted) {
+          setProfile(fetched);
+          setNeedsPassword(false);
+        }
+      } catch {
+        if (isMounted) {
+          setNeedsPassword(true);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    void tryFetch();
+    return () => { isMounted = false; };
+  }, [id, initialProfile]);
+
+  const handlePasswordSubmit = async () => {
+    if (!id) return;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const fetched = await api.getPublicProfile(id, password);
+      setProfile(fetched);
+      setNeedsPassword(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Senha incorreta ou perfil não encontrado.';
+      setLoadError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#BDECE2] flex items-center justify-center">
+        <p className="text-[#00605A] text-lg">Carregando perfil...</p>
+      </div>
+    );
+  }
+
+  if (!profile && needsPassword) {
+    return (
+      <div className="min-h-screen bg-[#BDECE2] flex flex-col items-center justify-center px-6 text-center">
+        <div className="bg-white rounded-3xl p-10 shadow-sm max-w-md w-full">
+          <h1 className="text-3xl text-[#02C39A] mb-4">Perfil protegido</h1>
+          <p className="text-gray-500 mb-6">
+            Este perfil exige uma senha pública para ser visualizado.
+          </p>
+          <input
+            type="password"
+            placeholder="Senha pública"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void handlePasswordSubmit()}
+            className="w-full bg-[#F5EFEF] border border-[#E5D5D5] text-[#555] rounded-full py-2 px-6 text-center focus:outline-none focus:ring-2 focus:ring-[#02C39A] placeholder:text-[#888] mb-4"
+          />
+          {loadError && <p className="text-red-500 text-sm mb-4">{loadError}</p>}
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => navigate('/acesso-medico')}
+              className="bg-[#D1C8C1] text-white rounded-lg py-2 px-6 font-bold hover:bg-[#bbaeA4] transition"
+            >
+              Voltar
+            </button>
+            <button
+              onClick={() => void handlePasswordSubmit()}
+              disabled={loading || !password}
+              className="bg-[#02C39A] text-white rounded-lg py-2 px-6 font-bold hover:bg-[#02A884] transition disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              Acessar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!profile) {
     return (
@@ -17,7 +109,7 @@ export const PerfilPacienteScreen: React.FC = () => {
         <div className="bg-white rounded-3xl p-10 shadow-sm max-w-xl">
           <h1 className="text-3xl text-[#02C39A] mb-4">Perfil indisponível</h1>
           <p className="text-gray-500 mb-6">
-            Este perfil precisa ser liberado pela tela de acesso médico. Volte e informe o link do perfil com a senha pública.
+            Perfil não encontrado. Verifique o link e tente novamente pela tela de acesso médico.
           </p>
           <button
             onClick={() => navigate('/acesso-medico')}

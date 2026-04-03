@@ -11,8 +11,7 @@ export const useCadastro = () => {
     setError(null);
 
     try {
-      const response = await api.post<RegisterResponse>('/auth/register', userData);
-      return response.data;
+      return await api.register(userData);
     } catch (err: unknown) {
       const errMsg = getErrorMessage(err, 'Erro ao cadastrar');
       setError(errMsg);

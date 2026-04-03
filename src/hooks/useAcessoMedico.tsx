@@ -12,9 +12,9 @@ export const useAcessoMedico = () => {
     setError(null);
 
     try {
-      const response = await api.post<PublicPatientProfile>(`/profiles/${profileId}`, { password: publicPassword });
-      setPatientData(response.data);
-      return response.data;
+      const profile = await api.getPublicProfile(profileId, publicPassword);
+      setPatientData(profile);
+      return profile;
     } catch (err: unknown) {
       const errMsg = getErrorMessage(err, 'Perfil não encontrado ou senha incorreta');
       setError(errMsg);

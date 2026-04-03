@@ -1,0 +1,20 @@
+services:
+  frontend:
+    build: .
+    container_name: vs-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    environment:
+      VITE_API_URL: ''
+      BACKEND_URL: http://backend:3000
+    networks:
+      - vida-segura-net
+
+networks:
+  vida-segura-net:
+    name: vida-segura-net
+    driver: bridge

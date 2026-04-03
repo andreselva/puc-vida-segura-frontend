@@ -1,31 +1,75 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppContainer } from '../components/Shared';
 import { MockQrCode } from '../components/MockQrCode';
-import { getAuthenticatedUser, getDemoAccessInfo, getProfileUrl } from '../services/api';
+import type { AppUser } from '../types';
+import { api, getProfileUrl } from '../services/api';
 
 export const QRCodeScreen: React.FC = () => {
   const navigate = useNavigate();
-  const currentUser = getAuthenticatedUser();
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [loadingUser, setLoadingUser] = useState<boolean>(true);
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login', { replace: true });
-    }
-  }, [currentUser, navigate]);
+    let isMounted = true;
+
+    const loadUser = async () => {
+      try {
+        const user = await api.getAuthenticatedUser();
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (!user) {
+          navigate('/login', { replace: true });
+          return;
+        }
+
+        setCurrentUser(user);
+      } catch (err) {
+        console.error(err);
+        if (isMounted) {
+          navigate('/login', { replace: true });
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingUser(false);
+        }
+      }
+    };
+
+    void loadUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
 
   const profileUrl = useMemo(() => {
     if (!currentUser) {
-      return getDemoAccessInfo().profileUrl;
+      return '';
     }
 
     return getProfileUrl(currentUser.profileId);
   }, [currentUser]);
 
   const handleCopyLink = async () => {
+    if (!profileUrl) {
+      return;
+    }
+
     await navigator.clipboard.writeText(profileUrl);
     alert('Link do perfil copiado.');
   };
+
+  if (loadingUser) {
+    return (
+      <AppContainer>
+        <p className="text-[#00605A] text-lg">Carregando seu perfil...</p>
+      </AppContainer>
+    );
+  }
 
   if (!currentUser) {
     return null;
